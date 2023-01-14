@@ -31,14 +31,16 @@ value =
 -- >>> P.runParser int "i10e"
 -- Success (10, "")
 int :: Parser Int
-int = P.fail "TODO (int)"
+int = P.between (P.char 'i') (P.char 'e') P.number
+
 
 -- | Parse a bencode string
 --
 -- >>> P.runParser string "3:abc"
 -- Success ("abc", "")
 string :: Parser String
-string = P.fail "TODO (string)"
+string = do
+  P.with P.number (\ch -> P.char ':' `P.pThen` P.take ch)
 
 -- | Parse a bencode list
 --
@@ -48,14 +50,18 @@ string = P.fail "TODO (string)"
 -- >>> P.runParser list "l1:a1:be"
 -- Success ([BencodeString "a",BencodeString "b"], "")
 list :: Parser [BencodeValue]
-list = P.fail "TODO (list)"
+list = P.between (P.char 'l') (P.char 'e') (P.many value)
 
 -- | Parse a bencode dict
 --
 -- >>> P.runParser dict "d1:ai1e1:bi2ee"
 -- Success ([(BencodeString "a", BencodeInt 1),(BencodeString "b",BencodeInt 2)], "")
 dict :: Parser [BencodeKW]
-dict = P.fail "TODO (dict)"
+dict = 
+  P.between (P.char 'd') (P.char 'e') (P.many pair)
+  where
+    pair = P.with string (\k -> P.with value (\v -> P.succeed (k, v)))
+
 
 -- | Convenience wrapper for `value`
 --
