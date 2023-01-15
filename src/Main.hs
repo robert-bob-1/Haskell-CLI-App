@@ -21,6 +21,7 @@ import Test.SimpleTest.Mock
 import Prelude hiding (print, putStrLn, readFile)
 import qualified Prelude
 import Control.Monad.IO.Class (liftIO)
+import Control.Monad
 usageMsg :: String
 usageMsg =
   L.intercalate
@@ -62,8 +63,8 @@ handleSearch searchOpts = do
   case db of
     Error err -> putStrLn "Failed to load DB"
     Success db -> do
-      db2<- DB.load
-      let entries = DB.findAll (matchedByAllQueries (searchOptTerms searchOpts)) (getSuccess db2 DB.empty)
+      currentdb<- DB.load
+      let entries = DB.findAll (matchedByAllQueries (searchOptTerms searchOpts)) (getSuccess currentdb DB.empty)
       case entries of
         [] -> do
           putStrLn "No entries found"
@@ -92,6 +93,29 @@ handleSearch searchOpts = do
 --   DB.save dbresult  
 --   return ()
 -- | Handle the add command
+-- handleAdd :: TestableMonadIO m => AddOptions -> m ()
+-- handleAdd addOpts =do
+--   snip <- readFile (addOptFilename addOpts)
+--   db <- DB.load
+--   case db of
+--     Error err -> putStrLn "Failed to load DB"
+--     Success db -> do
+--       putStrLn "Loaded DB succesfully"
+
+--   let
+--     dbsuccess = getSuccess db DB.empty
+--     checkIfExists = DB.findFirst (\e -> entrySnippet e == snip) dbsuccess
+--   case checkIfExists of
+--     Just entry -> do
+--       putStrLn "Entry with this content already exists: "
+--       putStrLn . show . FmtEntry $ entry
+--       return()
+--     Nothing -> do
+--       putStrLn "Snippet does not exist, inserting"
+--   let 
+--     dbresult = DB.insertWith (\id -> addOptsToEntry id snip addOpts) dbsuccess
+--   DB.save dbresult  
+--   return ()
 handleAdd :: TestableMonadIO m => AddOptions -> m ()
 handleAdd addOpts =do
   snip <- readFile (addOptFilename addOpts)
@@ -104,16 +128,16 @@ handleAdd addOpts =do
   let
     dbsuccess = getSuccess db DB.empty
     checkIfExists = DB.findFirst (\e -> entrySnippet e == snip) dbsuccess
+    dbresult = DB.insertWith (\id -> addOptsToEntry id snip addOpts) dbsuccess
   case checkIfExists of
     Just entry -> do
       putStrLn "Entry with this content already exists: "
       putStrLn . show . FmtEntry $ entry
-      return()
     Nothing -> do
-      putStrLn "Snippet does not exist, inserting"
-  let 
-    dbresult = DB.insertWith (\id -> addOptsToEntry id snip addOpts) dbsuccess
-  DB.save dbresult  
+      DB.save dbresult
+      return()
+  
+    
   return ()
 
 addOptsToEntry :: Int -> String -> AddOptions -> Entry

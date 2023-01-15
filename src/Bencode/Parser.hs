@@ -39,8 +39,11 @@ int = P.between (P.char 'i') (P.char 'e') P.number
 -- >>> P.runParser string "3:abc"
 -- Success ("abc", "")
 string :: Parser String
-string = do
-  P.with P.number (\ch -> P.char ':' `P.pThen` P.take ch)
+string = 
+  let
+    colonParser = P.char ':'
+  in
+    P.with P.number (\ch -> P.pThen colonParser (P.take ch))
 
 -- | Parse a bencode list
 --
@@ -50,7 +53,13 @@ string = do
 -- >>> P.runParser list "l1:a1:be"
 -- Success ([BencodeString "a",BencodeString "b"], "")
 list :: Parser [BencodeValue]
-list = P.between (P.char 'l') (P.char 'e') (P.many value)
+list = 
+  let
+    charL = P.char 'l'
+    charE = P.char 'e'
+    number = P.many value
+  in
+    P.between charL charE number
 
 -- | Parse a bencode dict
 --
@@ -58,9 +67,10 @@ list = P.between (P.char 'l') (P.char 'e') (P.many value)
 -- Success ([(BencodeString "a", BencodeInt 1),(BencodeString "b",BencodeInt 2)], "")
 dict :: Parser [BencodeKW]
 dict = 
-  P.between (P.char 'd') (P.char 'e') (P.many pair)
-  where
+  let
     pair = P.with string (\k -> P.with value (\v -> P.succeed (k, v)))
+  in
+    P.between (P.char 'd') (P.char 'e') (P.many pair)    
 
 
 -- | Convenience wrapper for `value`
